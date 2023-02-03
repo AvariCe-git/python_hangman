@@ -52,18 +52,25 @@ class hangman:
                 failed_attempts.append(inp)
             self.print_lines(failed_attempts,counter)
 
-    def check_win(self):      
+    def check_win(self,stats, quit_game = False):      
 
-        if '_' in self.masked_word:
+        if quit_game:
+            print(f'\nThat\'s a quitter')
+            stats['losses'] += 1
+        elif '_' in self.masked_word:
             print (f'You suck. The word was {self.word}')
-            return False
-
+            stats['losses']   += 1    
         else:
             print (f'You suck, but at least you won')
-            return True
+            stats['wins'] += 1
+        stats['total']      += 1
+        print(f'Total games: {stats["total"]}, Wins: {stats["wins"]}, Losses: {stats["losses"]}')
+        print(f'You\'ve won  {stats["wins"]} games, {str(round(p_win,2))} % of the total games')
+        print(f'You\'ve lost {stats["losses"]} games, {str(round(p_loss,2))} % of the total games')
+        return stats
 
     def print_lines(self,attempts,counter):
-        lines =    [f'       \n       \n        \n       \n        ',
+        lines =    [f' \r',
                     f' +---+ \n |     \n |      \n |     \n===     ',
                     f' +---+ \n |   O \n |      \n |     \n===     ',
                     f' +---+ \n |   O \n |   |  \n |     \n===     ',
@@ -72,6 +79,7 @@ class hangman:
                     f' +---+ \n |   O \n |  /|\\\n |    \\\n===    ',
                     f' +---+ \n |   O \n |  /|\\\n |  / \\\n===    ']
 
+        os.system('cls||clear')
         print(lines[counter])
         
         print(self.masked_word)
@@ -113,10 +121,6 @@ def read_file():
                         stats['wins']   = 0
                         stats['losses'] = 0
                         stats['total'] += 1
-
-                    print(f'You\'ve played  {stats["total"]} games')
-                    print(f'You\'ve won  {stats["wins"]} games, {str(round(p_win,2))} % of the total games')
-                    print(f'You\'ve lost {stats["losses"]} games, {str(round(p_loss,2))} % of the total games')
                 
                 except:
                     print(f'Stats file is corrupted, deleting stats')
@@ -125,7 +129,7 @@ def read_file():
 
     except IOError:
         print(f'This is your first time playing. Welcome to hell!')
-    
+
     return word_list,stats
 
 def play_game():
@@ -139,22 +143,25 @@ def play_game():
         i =  random.randint(0, len(word_list)-1)
         wotd = hangman(word_list[i].replace('\n', ''))
         wotd.game()
-        
-        if wotd.check_win():
-            stats['wins']   += 1
-        else:
-            stats['losses'] += 1
-        stats['total']      += 1
-
-        print(f'Total games: {stats["total"]}, Wins: {stats["wins"]}, Losses: {stats["losses"]}')
+        stats = wotd.check_win(stats)
+    
         print (f'Do you want to continue?')
-        inp = input(f'Press y for yes, anything else to quit: ').lower()
-        
-        if inp != 'y':
+        try:
+            inp = input(f'Press y for yes, anything else to quit: ').lower()
+            
+            if inp != 'y':
+                with open('stats.txt','w') as stats_file:
+                    stats_file.write(json.dumps(stats))
+                play_game = False
+            else:
+                del wotd
+        except KeyboardInterrupt:
+            wotd.check_win(stats,True)
             with open('stats.txt','w') as stats_file:
                 stats_file.write(json.dumps(stats))
-            play_game = False
-        else:
-            del wotd
+            exit()
+        except:
+            print(f'Wtf')
+            exit()
 
 play_game()
